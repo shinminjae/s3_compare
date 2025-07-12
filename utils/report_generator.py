@@ -79,9 +79,16 @@ class ReportGenerator:
                 }
                 data.append(row)
             
-            # DataFrame 생성 및 CSV 저장
+            # DataFrame 생성 및 CSV 저장 (기존 파일에 추가)
             df = pd.DataFrame(data)
-            df.to_csv(output_path, index=False, encoding='utf-8-sig')
+            
+            # 기존 파일이 있으면 헤더 없이 추가, 없으면 헤더 포함하여 생성
+            if Path(output_path).exists():
+                df.to_csv(output_path, mode='a', header=False, index=False, encoding='utf-8-sig')
+                self.logger.info(f"기존 파일에 {len(data)}개 레코드 추가: {output_path}")
+            else:
+                df.to_csv(output_path, index=False, encoding='utf-8-sig')
+                self.logger.info(f"새 파일 생성: {output_path}")
             
             # 요약 정보 생성
             summary_path = output_path.replace('.csv', '_summary.csv')
@@ -348,13 +355,68 @@ class ReportGenerator:
                 }
                 data.append(row)
             
-            # DataFrame 생성 및 저장
+            # DataFrame 생성 및 저장 (기존 파일에 추가)
             df = pd.DataFrame(data)
-            df.to_csv(output_path, index=False, encoding='utf-8-sig')
+            
+            # 기존 파일이 있으면 헤더 없이 추가, 없으면 헤더 포함하여 생성
+            if Path(output_path).exists():
+                df.to_csv(output_path, mode='a', header=False, index=False, encoding='utf-8-sig')
+                self.logger.info(f"기존 파일에 {len(data)}개 불일치 파일 추가: {output_path}")
+            else:
+                df.to_csv(output_path, index=False, encoding='utf-8-sig')
+                self.logger.info(f"새 불일치 파일 리포트 생성: {output_path}")
             
             self.logger.info(f"상세 불일치 리포트 생성 완료: {output_path}")
             return True
             
         except Exception as e:
             self.logger.error(f"상세 불일치 리포트 생성 실패: {e}")
+            return False
+    
+    def generate_detailed_mismatch_report_with_json(self, mismatched_records: List[Dict], 
+                                                   output_path: str) -> bool:
+        """
+        불일치하는 레코드의 JSON 내역을 포함한 상세 리포트를 생성합니다
+        
+        Args:
+            mismatched_records: 불일치하는 레코드 정보 리스트
+            output_path: 출력 파일 경로
+            
+        Returns:
+            성공 여부
+        """
+        try:
+            if not mismatched_records:
+                self.logger.info("불일치 레코드가 없습니다.")
+                return True
+            
+            # 불일치 레코드 정보를 DataFrame으로 변환
+            data = []
+            for record in mismatched_records:
+                row = {
+                    'hash': record['hash'],
+                    'hash_short': record['hash_short'],
+                    'file_path': record['file_path'],
+                    'bucket_type': record['bucket_type'],
+                    'json_content': record['json_content']
+                }
+                data.append(row)
+            
+            # DataFrame 생성 및 CSV 저장 (기존 파일에 추가)
+            df = pd.DataFrame(data)
+            
+            # 기존 파일이 있으면 헤더 없이 추가, 없으면 헤더 포함하여 생성
+            if Path(output_path).exists():
+                df.to_csv(output_path, mode='a', header=False, index=False, encoding='utf-8-sig')
+                self.logger.info(f"기존 파일에 {len(data)}개 불일치 레코드 추가: {output_path}")
+            else:
+                df.to_csv(output_path, index=False, encoding='utf-8-sig')
+                self.logger.info(f"새 불일치 레코드 파일 생성: {output_path}")
+            
+            self.logger.info(f"불일치 레코드 JSON 상세 리포트 생성 완료: {output_path}")
+            self.logger.info(f"총 {len(mismatched_records)}개의 불일치 레코드가 기록되었습니다.")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"불일치 레코드 JSON 상세 리포트 생성 실패: {e}")
             return False 
